@@ -322,10 +322,92 @@
             font-size: 3rem;
             transform: rotate(15deg);
         }
+        
+        /* 用户设置按钮样式 */
+        .user-settings {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        
+        #userSettingsBtn {
+            background: var(--accent-color);
+            box-shadow: 0 4px 0 #689F38;
+        }
+        
+        #userSettingsBtn:hover {
+            background: #9CCC65;
+        }
+        
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background: var(--card-color);
+            margin: 15% auto;
+            padding: 25px;
+            border: 3px dashed #FFB74D;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 8px 0 #FFB74D, 0 15px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            animation: modalOpen 0.4s;
+        }
+        
+        @keyframes modalOpen {
+            from {opacity: 0; transform: scale(0.8);}
+            to {opacity: 1; transform: scale(1);}
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #FF5722;
+        }
+        
+        .close-btn:hover {
+            color: #E64A19;
+            transform: scale(1.2);
+        }
+        
+        .modal-title {
+            font-family: 'ZCOOL KuaiLe', cursive;
+            font-size: 1.8rem;
+            color: #FF5722;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .download-btn {
+            background: #2196F3;
+            box-shadow: 0 4px 0 #1976D2;
+            margin-top: 15px;
+        }
+        
+        .download-btn:hover {
+            background: #42A5F5;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="user-settings">
+            <button id="userSettingsBtn">设置用户名</button>
+        </div>
         <div class="page-header">
             <h1>人生遥控器</h1>
             <p>掌控命运，开挂人生！</p>
@@ -357,6 +439,20 @@
         <footer>
             <p>人生遥控器 &copy; 2023 - 开挂人生，就是这么简单！</p>
         </footer>
+    </div>
+
+    <!-- 用户设置模态框 -->
+    <div id="userSettingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModal">&times;</span>
+            <h3 class="modal-title">设置用户名</h3>
+            <div class="form-group">
+                <label for="username">你的名字</label>
+                <input type="text" id="username" placeholder="请输入你的名字">
+            </div>
+            <button id="saveUsername">保存</button>
+            <button id="downloadData" class="download-btn">生成图片</button>
+        </div>
     </div>
 
     <script>
@@ -505,7 +601,128 @@
         }
 
         // 初始化页面
-        document.addEventListener('DOMContentLoaded', renderStats);
+        document.addEventListener('DOMContentLoaded', () => {
+            renderStats();
+            setupUserSettings();
+        });
+        
+        // 用户设置相关功能
+        function setupUserSettings() {
+            const modal = document.getElementById('userSettingsModal');
+            const settingsBtn = document.getElementById('userSettingsBtn');
+            const closeBtn = document.getElementById('closeModal');
+            const saveBtn = document.getElementById('saveUsername');
+            const downloadBtn = document.getElementById('downloadData');
+            const usernameInput = document.getElementById('username');
+            
+            // 从本地存储加载用户名
+            const savedUsername = localStorage.getItem('lifeControllerUsername') || '';
+            usernameInput.value = savedUsername;
+            
+            // 打开模态框
+            settingsBtn.addEventListener('click', () => {
+                modal.style.display = 'block';
+            });
+            
+            // 关闭模态框
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            
+            // 点击模态框外部关闭
+            window.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+            
+            // 保存用户名
+            saveBtn.addEventListener('click', () => {
+                const username = usernameInput.value.trim();
+                if (username) {
+                    localStorage.setItem('lifeControllerUsername', username);
+                    alert(`用户名已设置为: ${username}`);
+                    modal.style.display = 'none';
+                } else {
+                    alert('请输入有效的用户名');
+                }
+            });
+            
+            // 生成图片并下载功能
+            downloadBtn.addEventListener('click', () => {
+                const username = localStorage.getItem('lifeControllerUsername') || '未命名用户';
+                const stats = getStats();
+                
+                // 创建一个临时的canvas元素
+                const canvas = document.createElement('canvas');
+                canvas.width = 800;
+                canvas.height = 600;
+                const ctx = canvas.getContext('2d');
+                
+                // 设置背景
+                ctx.fillStyle = '#FFF9C4';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 添加标题
+                ctx.fillStyle = '#FF5722';
+                ctx.font = 'bold 40px "ZCOOL KuaiLe", cursive';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${username}的人生遥控器`, canvas.width/2, 60);
+                
+                // 添加日期
+                ctx.font = '20px "ZCOOL QingKe HuangYou", cursive';
+                ctx.fillStyle = '#FF9800';
+                ctx.fillText(new Date().toLocaleDateString(), canvas.width/2, 90);
+                
+                // 绘制属性条
+                let yPos = 150;
+                stats.forEach(stat => {
+                    // 属性名称
+                    ctx.fillStyle = '#333333';
+                    ctx.font = 'bold 24px "ZCOOL QingKe HuangYou", cursive';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`${stat.name}: ${stat.value}`, 50, yPos);
+                    
+                    // 绘制进度条背景
+                    ctx.fillStyle = '#EEEEEE';
+                    ctx.fillRect(50, yPos + 10, 700, 30);
+                    
+                    // 绘制进度条
+                    ctx.fillStyle = stat.color;
+                    ctx.fillRect(50, yPos + 10, 7 * stat.value, 30);
+                    
+                    // 添加表情
+                    let emoji = '😐';
+                    if (stat.value >= 90) emoji = '🔥';
+                    else if (stat.value >= 70) emoji = '😎';
+                    else if (stat.value >= 50) emoji = '😊';
+                    else if (stat.value >= 30) emoji = '😕';
+                    else emoji = '😱';
+                    
+                    ctx.font = '24px Arial';
+                    ctx.fillText(emoji, 760, yPos);
+                    
+                    yPos += 70;
+                });
+                
+                // 添加页脚
+                ctx.fillStyle = '#FF5722';
+                ctx.font = '18px "ZCOOL QingKe HuangYou", cursive';
+                ctx.textAlign = 'center';
+                ctx.fillText('人生遥控器 - 开挂人生，就是这么简单！', canvas.width/2, canvas.height - 30);
+                
+                // 转换为图片并下载
+                const imgUrl = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = imgUrl;
+                a.download = `${username}的人生遥控器.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                modal.style.display = 'none';
+            });
+        }
     </script>
 </body>
 </html>
